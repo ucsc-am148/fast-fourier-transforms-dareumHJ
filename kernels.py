@@ -204,9 +204,15 @@ def f2_kernel(
     """
     pid = tl.program_id(0)
 
+    # for performance, load the bit-reversal permutation and twiddles into registers
+    # not scatter load, continuous load
+    x_re = tl.load(x_re_ptr + pid * N + tl.arange(0, N))
+    x_im = tl.load(x_im_ptr + pid * N + tl.arange(0, N))
+
+    # bit-reversal permutation shuffle (in register)
     perm = tl.load(perm_ptr + tl.arange(0, N))
-    x_re = tl.load(x_re_ptr + pid * N + perm)
-    x_im = tl.load(x_im_ptr + pid * N + perm)
+    x_re = tl.gather(x_re, perm, axis=0)
+    x_im = tl.gather(x_im, perm, axis=0)
 
     tw_re = tl.load(tw_re_ptr + tl.arange(0, N // 2))
     tw_im = tl.load(tw_im_ptr + tl.arange(0, N // 2))
