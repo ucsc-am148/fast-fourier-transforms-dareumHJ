@@ -228,7 +228,7 @@ def f2_kernel(
         partner_re = tl.gather(x_re, partner_idx, axis=0)
         partner_im = tl.gather(x_im, partner_idx, axis=0)
 
-        tw_idx = (idx % half) * (N >> (s + 1))
+        tw_idx = (idx & half) * (N >> (s + 1))
         tw_re_s = tl.gather(tw_re, tw_idx, axis=0)
         tw_im_s = tl.gather(tw_im, tw_idx, axis=0)
 
@@ -278,7 +278,13 @@ def f2_launch(x_re, x_im, y_re, y_im, tw_re, tw_im, perm):
     """
     B, N = x_re.shape
     LOG2_N = int(math.log2(N))
-    nw = 8 if N >= 2048 else 4 # temp hack to pass large-N f2 sanity check
+    # temp hack to pass large-N f2 sanity check
+    if N >= 8192:
+        nw = 16
+    elif N >= 2048:
+        nw = 8
+    else:
+        nw = 4
     f2_kernel[(B,)](
         x_re, x_im, y_re, y_im, tw_re, tw_im, perm, tw_re, tw_im,
         OUTER_DIM=1, N_TOTAL=0,  # unused in vanilla mode
