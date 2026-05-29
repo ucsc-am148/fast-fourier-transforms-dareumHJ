@@ -228,7 +228,7 @@ def f2_kernel(
         partner_re = tl.gather(x_re, partner_idx, axis=0)
         partner_im = tl.gather(x_im, partner_idx, axis=0)
 
-        tw_idx = (idx & half) * (N >> (s + 1))
+        tw_idx = (idx & (half-1)) * (N >> (s + 1))
         tw_re_s = tl.gather(tw_re, tw_idx, axis=0)
         tw_im_s = tl.gather(tw_im, tw_idx, axis=0)
 
