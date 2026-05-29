@@ -228,6 +228,10 @@ def f2_kernel(
         partner_re = tl.gather(x_re, partner_idx, axis=0)
         partner_im = tl.gather(x_im, partner_idx, axis=0)
 
+        tw_idx = (idx % half) * (N >> (s + 1))
+        tw_re_s = tl.gather(tw_re, tw_idx, axis=0)
+        tw_im_s = tl.gather(tw_im, tw_idx, axis=0)
+
         # butterfly combine
         # W must multiply the lower element!!!
         # new_upper = upper + W*lower, new_lower = upper - W*lower
@@ -237,19 +241,11 @@ def f2_kernel(
         upper_re = tl.where(is_upper, x_re, partner_re)
         upper_im = tl.where(is_upper, x_im, partner_im)
 
-        if s == 0: # skip twiddle multiply in the first stage (to enhance performance)
-            x_re = tl.where(is_upper, upper_re + lower_re, upper_re - lower_re)
-            x_im = tl.where(is_upper, upper_im + lower_im, upper_im - lower_im)
-        else:
-            tw_idx = (idx % half) * (N >> (s + 1))
-            tw_re_s = tl.gather(tw_re, tw_idx, axis=0)
-            tw_im_s = tl.gather(tw_im, tw_idx, axis=0)
+        tmp_re = lower_re * tw_re_s - lower_im * tw_im_s
+        tmp_im = lower_re * tw_im_s + lower_im * tw_re_s
 
-            tmp_re = lower_re * tw_re_s - lower_im * tw_im_s
-            tmp_im = lower_re * tw_im_s + lower_im * tw_re_s
-
-            x_re = tl.where(is_upper, upper_re + tmp_re, upper_re - tmp_re)
-            x_im = tl.where(is_upper, upper_im + tmp_im, upper_im - tmp_im)
+        x_re = tl.where(is_upper, upper_re + tmp_re, upper_re - tmp_re)
+        x_im = tl.where(is_upper, upper_im + tmp_im, upper_im - tmp_im)
 
     idx = tl.arange(0, N)
 
